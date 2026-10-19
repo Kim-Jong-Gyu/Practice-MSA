@@ -1,0 +1,14 @@
+apply plugin: 'java-test-fixtures'
+
+bootJar { enabled = false }
+jar { enabled = true }
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // testFixtures 코드가 쓰는 의존성.
+    // Api로 선언하면 이 fixtures를 쓰는 서비스 모듈에도 함께 전달됨
+    testFixturesApi 'org.springframework.boot:spring-boot-testcontainers'
+    testFixturesApi 'org.testcontainers:testcontainers-mongodb'
+    testFixturesApi 'org.testcontainers:testcontainers-mysql'
+}

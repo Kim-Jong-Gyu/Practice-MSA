@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: api
+
+api:
+  product-composite:
+    create-composite-product:
+      description: Creates a composite product
+      notes: |
+        # Normal response
+        The composite product information posted to the API will be split up and stored as separate product-info, recommendation and review entities.
+    get-composite-product:
+      description: Returns a composite view of the specified product id
+      notes: |
+        # Normal response
+        If the requested product id is found the method will return information regarding the product, recommendations and reviews.
+    delete-composite-product:
+      description: Deletes a product composite
+      notes: |
+        # Normal response
+        Entities for product information, recommendations and reviews related to the specified productId will be deleted.
+
+springdoc:
+  swagger-ui:
+    path: /openapi/swagger-ui.html
+  api-docs:
+    path: /openapi/v3/api-docs
+  packages-to-scan: com.practice.magnus
+  paths-to-match: /**
