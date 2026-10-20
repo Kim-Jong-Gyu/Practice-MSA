@@ -12,6 +12,8 @@
 #
 : ${HOST=localhost}
 : ${PORT=8080}
+: ${EUREKA_PORT=8761}
+: ${EXPECTED_EUREKA_APPS=4}
 : ${PROD_ID_REVS_RECS=1}
 : ${PROD_ID_NOT_FOUND=13}
 : ${PROD_ID_NO_RECS=113}
@@ -79,11 +81,35 @@ function waitForService() {
             echo " Give up"
             exit 1
         else
-            sleep 6
+            sleep 3
             echo -n ", retry #$n "
         fi
     done
     echo "DONE, continues..."
+}
+
+function waitForEurekaRegistrations() {
+    echo -n "Wait for $EXPECTED_EUREKA_APPS services to register in Eureka... "
+
+    n=0
+    until [[ "$(curl -s -H "accept:application/json" http://$HOST:$EUREKA_PORT/eureka/apps | jq '.applications.application | length' 2>/dev/null)" == "$EXPECTED_EUREKA_APPS" ]]
+    do
+        n=$((n + 1))
+        if [[ $n == 40 ]]
+        then
+            echo " Give up"
+            exit 1
+        else
+            sleep 3
+            echo -n ", retry #$n "
+        fi
+    done
+    echo "DONE"
+
+    # 등록된 서비스 수와 이름 확인
+    assertCurl 200 "curl -H \"accept:application/json\" http://$HOST:$EUREKA_PORT/eureka/apps -s"
+    assertEqual $EXPECTED_EUREKA_APPS $(echo $RESPONSE | jq ".applications.application | length")
+    echo "Registered: $(echo $RESPONSE | jq -r '[.applications.application[].name] | sort | join(", ")')"
 }
 
 function testCompositeCreated() {
@@ -110,7 +136,7 @@ function waitForMessageProcessing() {
             echo " Give up"
             exit 1
         else
-            sleep 6
+            sleep 3
             echo -n ", retry #$n "
         fi
     done
@@ -171,6 +197,7 @@ echo "Start Tests:" `date`
 
 echo "HOST=${HOST}"
 echo "PORT=${PORT}"
+echo "EUREKA_PORT=${EUREKA_PORT}"
 echo "COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml}"
 
 if [[ $@ == *"start"* ]]
@@ -183,6 +210,9 @@ then
 fi
 
 waitForService curl http://$HOST:$PORT/actuator/health
+
+# Eureka에 4개 서비스(product, recommendation, review, product-composite)가 모두 등록될 때까지 대기
+waitForEurekaRegistrations
 
 setupTestdata
 

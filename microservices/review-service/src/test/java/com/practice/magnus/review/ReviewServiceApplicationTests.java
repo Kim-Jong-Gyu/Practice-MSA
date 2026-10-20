@@ -29,7 +29,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 		webEnvironment = RANDOM_PORT,
 		properties = {
 				"logging.level.com.practice.magnus=DEBUG",
-				"spring.jpa.hibernate.ddl-auto=create-drop"
+				"spring.jpa.hibernate.ddl-auto=create-drop",
+				"eureka.client.enabled=false"
 		})
 @AutoConfigureWebTestClient
 class ReviewServiceApplicationTests extends MySqlTestBase {

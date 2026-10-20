@@ -1,6 +1,4 @@
-spring:
-  application:
-    name: recommendation-service
+spring.application.name: recommendation
 
 server.port: 7002
 server.error.include-message: always
@@ -12,6 +10,18 @@ spring.mongodb:
 
 spring.data.mongodb:
   auto-index-creation: true
+
+# Eureka
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+    initialInstanceInfoReplicationIntervalSeconds: 5
+    registryFetchIntervalSeconds: 5
+  instance:
+    leaseRenewalIntervalInSeconds: 5
+    leaseExpirationDurationInSeconds: 5
+
 
 spring.cloud.function:
   definition: messageProcessor
@@ -60,6 +70,8 @@ management.endpoints.web.exposure.include: "*"
 ---
 
 spring.config.activate.on-profile: docker
+
+eureka.client.serviceUrl.defaultZone: http://eureka:8761/eureka/
 
 server.port: 8080
 

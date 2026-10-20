@@ -1,0 +1,35 @@
+spring.application.name: eureka
+
+# Eureka 서버의 관례적인 포트. 대시보드: http://localhost:8761
+server:
+  port: 8761
+
+eureka:
+  instance:
+    # 이 서버의 호스트 이름. 아래 defaultZone 주소를 만드는 데 쓴다
+    hostname: localhost
+
+  client:
+    # 이 서버는 Eureka "서버"일 뿐이므로 자기 자신을 서비스로 등록하지 않는다
+    registerWithEureka: false
+    # 다른 Eureka 서버에서 서비스 목록을 받아 오지 않는다 (서버가 1대뿐이라 동기화할 대상이 없음)
+    fetchRegistry: false
+    serviceUrl:
+      # Eureka 서버 주소. 서버가 여러 대일 때 서로를 가리키는 용도로, 1대 구성에서는 자기 자신을 적는다
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+  # 아래 두 설정은 실습에서 기다리지 않도록 줄인 값
+  # from: https://github.com/spring-cloud-samples/eureka/blob/master/src/main/resources/application.yml
+  server:
+    # 시작할 때 다른 Eureka 서버와 동기화하려고 기다리는 시간 (기본 5분)
+    # 기본값이면 서버를 띄운 뒤 5분 동안 클라이언트 등록 요청을 거부한다
+    waitTimeInMsWhenSyncEmpty: 0
+    # 클라이언트에게 돌려주는 서비스 목록 캐시의 갱신 간격 (기본 30초)
+    # 클라이언트의 registryFetchIntervalSeconds: 5와 맞춰서, 새 인스턴스가 5초 안에 보이게 한다
+    response-cache-update-interval-ms: 5000
+    # 자기 보호 모드: 하트비트가 한꺼번에 끊기면 네트워크 장애로 보고 인스턴스를 목록에서 지우지 않는다
+    # 실습에서 컨테이너를 자주 내렸다 올리면 죽은 인스턴스가 남으므로, 필요하면 주석을 풀어 끈다 (운영에서는 켜 둘 것)
+    # enableSelfPreservation: false
+
+# Actuator 엔드포인트를 모두 공개 (실습용. 운영에서는 health,info 정도만 열 것)
+management.endpoints.web.exposure.include: "*"

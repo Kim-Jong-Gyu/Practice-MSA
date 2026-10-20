@@ -38,7 +38,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @DisplayName("Product Composite 메시지 발행 테스트")
 @SpringBootTest(
     webEnvironment = RANDOM_PORT,
-    properties = "spring.cloud.stream.default-binder=integration")
+    properties = {
+            "spring.cloud.stream.default-binder=integration",
+            "eureka.client.enabled=false"
+    }
+)
 @AutoConfigureWebTestClient
 @Import(TestChannelBinderConfiguration.class)
 class MessagingTests {

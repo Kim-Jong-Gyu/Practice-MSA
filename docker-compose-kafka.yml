@@ -76,6 +76,12 @@ services:
       kafka:
         condition: service_healthy
 
+  eureka:
+    build: spring-cloud/eureka-server
+    mem_limit: 512m
+    ports:
+      - "8761:8761"
+      -
   # $ mongosh
   mongodb:
     image: mongo:8.0

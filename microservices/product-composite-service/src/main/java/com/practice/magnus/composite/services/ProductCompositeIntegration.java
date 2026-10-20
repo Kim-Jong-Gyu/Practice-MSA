@@ -1,9 +1,5 @@
 package com.practice.magnus.composite.services;
 
-import static com.practice.magnus.api.event.Event.Type.CREATE;
-import static com.practice.magnus.api.event.Event.Type.DELETE;
-import static reactor.core.publisher.Flux.empty;
-
 import com.practice.magnus.api.core.product.Product;
 import com.practice.magnus.api.core.product.ProductService;
 import com.practice.magnus.api.core.recommendation.Recommendation;
@@ -16,12 +12,12 @@ import com.practice.magnus.util.exceptions.NotFoundException;
 import com.practice.magnus.util.http.HttpErrorInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.health.contributor.Health;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -30,11 +26,21 @@ import reactor.core.publisher.Mono;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
+import static com.practice.magnus.api.event.Event.Type.CREATE;
+import static com.practice.magnus.api.event.Event.Type.DELETE;
+import static reactor.core.publisher.Flux.empty;
+
 
 @Component
 public class ProductCompositeIntegration implements ProductService, RecommendationService, ReviewService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProductCompositeIntegration.class);
+
+    // Eureka에 등록된 이름 (각 서비스의 spring.application.name)
+    private static final String PRODUCT_SERVICE_URL = "http://product";
+    private static final String RECOMMENDATION_SERVICE_URL = "http://recommendation";
+    private static final String REVIEW_SERVICE_URL = "http://review";
+
 
     private static final String PRODUCTS_BINDING = "products-out-0";
     private static final String RECOMMENDATIONS_BINDING = "recommendations-out-0";
@@ -44,31 +50,15 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
     private final JsonMapper mapper;
     private final StreamBridge streamBridge;
 
-    private final String productServiceUrl;
-    private final String recommendationServiceUrl;
-    private final String reviewServiceUrl;
 
     public ProductCompositeIntegration(
-            WebClient.Builder webClientBuilder,
+            @LoadBalanced WebClient.Builder webClientBuilder,
             JsonMapper mapper,
-            StreamBridge streamBridge,
-
-            @Value("${app.product-service.host}") String productServiceHost,
-            @Value("${app.product-service.port}") int    productServicePort,
-
-            @Value("${app.recommendation-service.host}") String recommendationServiceHost,
-            @Value("${app.recommendation-service.port}") int    recommendationServicePort,
-
-            @Value("${app.review-service.host}") String reviewServiceHost,
-            @Value("${app.review-service.port}") int    reviewServicePort
+            StreamBridge streamBridge
     ) {
-        this.webClient = webClientBuilder.build();
+        this.webClient = webClientBuilder.build();   // 늦은 초기화 없이 바로 생성
         this.mapper = mapper;
         this.streamBridge = streamBridge;
-
-        productServiceUrl        = "http://" + productServiceHost + ":" + productServicePort;
-        recommendationServiceUrl = "http://" + recommendationServiceHost + ":" + recommendationServicePort;
-        reviewServiceUrl         = "http://" + reviewServiceHost + ":" + reviewServicePort;
     }
 
     @Override
@@ -79,7 +69,7 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 
     @Override
     public Mono<Product> getProduct(int productId) {
-        String url = productServiceUrl + "/product/" + productId;
+        String url = PRODUCT_SERVICE_URL + "/product/" + productId;
         LOG.debug("Will call the getProduct API on URL: {}", url);
 
         return webClient.get().uri(url).retrieve()
@@ -101,7 +91,7 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 
     @Override
     public Flux<Recommendation> getRecommendations(int productId) {
-        String url = recommendationServiceUrl + "/recommendation?productId=" + productId;
+        String url = RECOMMENDATION_SERVICE_URL + "/recommendation?productId=" + productId;
         LOG.debug("Will call the getRecommendations API on URL: {}", url);
 
         // 일부 서비스가 실패해도 composite가 부분 응답을 줄 수 있도록 빈 결과로 대체
@@ -124,7 +114,7 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 
     @Override
     public Flux<Review> getReviews(int productId) {
-        String url = reviewServiceUrl + "/review?productId=" + productId;
+        String url = REVIEW_SERVICE_URL + "/review?productId=" + productId;
         LOG.debug("Will call the getReviews API on URL: {}", url);
 
         // 일부 서비스가 실패해도 composite가 부분 응답을 줄 수 있도록 빈 결과로 대체
@@ -140,15 +130,15 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
     }
 
     public Mono<Health> getProductHealth() {
-        return getHealth(productServiceUrl);
+        return getHealth(PRODUCT_SERVICE_URL);
     }
 
     public Mono<Health> getRecommendationHealth() {
-        return getHealth(recommendationServiceUrl);
+        return getHealth(RECOMMENDATION_SERVICE_URL);
     }
 
     public Mono<Health> getReviewHealth() {
-        return getHealth(reviewServiceUrl);
+    return getHealth(REVIEW_SERVICE_URL);
     }
 
     private Mono<Health> getHealth(String baseUrl) {

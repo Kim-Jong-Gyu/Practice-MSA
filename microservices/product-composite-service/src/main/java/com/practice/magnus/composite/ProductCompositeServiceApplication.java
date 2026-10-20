@@ -15,7 +15,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.health.contributor.CompositeReactiveHealthContributor;
 import org.springframework.boot.health.contributor.ReactiveHealthContributor;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @SpringBootApplication(scanBasePackages = "com.practice.magnus")
 public class ProductCompositeServiceApplication {
@@ -64,6 +66,16 @@ public class ProductCompositeServiceApplication {
 		registry.put("review", integration::getReviewHealth);
 
 		return CompositeReactiveHealthContributor.fromMap(registry);
+	}
+
+	/**
+	 * 로드밸런서
+	 *
+	 */
+	@Bean
+	@LoadBalanced
+	public WebClient.Builder loadBalancedWebClientBuilder() {
+		return WebClient.builder();
 	}
 
 	public static void main(String[] args) {
