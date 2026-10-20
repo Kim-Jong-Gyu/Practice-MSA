@@ -79,6 +79,8 @@ ureka:
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 
+spring.cloud.loadbalancer.cache.ttl: 5s
+
 # Spring Cloud Stream
 spring.cloud.stream:
   defaultBinder: rabbit

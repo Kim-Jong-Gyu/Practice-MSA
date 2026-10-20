@@ -1,0 +1,10 @@
+{
+  "productId": 4,
+  "name": "무선 마우스",
+  "weight": 90,
+  "recommendations": [],
+  "reviews": [
+    { "reviewId": 1, "author": "강민지", "subject": "가볍고 조용해요", "content": "클릭 소리가 거의 안 나요." },
+    { "reviewId": 2, "author": "서도윤", "subject": "배터리 오래감", "content": "한 달 넘게 쓰고 있어요." }
+  ]
+}

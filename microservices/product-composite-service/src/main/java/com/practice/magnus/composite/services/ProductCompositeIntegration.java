@@ -129,29 +129,6 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
         sendMessage(REVIEWS_BINDING, new Event<Integer, Review>(DELETE, productId, null));
     }
 
-    public Mono<Health> getProductHealth() {
-        return getHealth(PRODUCT_SERVICE_URL);
-    }
-
-    public Mono<Health> getRecommendationHealth() {
-        return getHealth(RECOMMENDATION_SERVICE_URL);
-    }
-
-    public Mono<Health> getReviewHealth() {
-    return getHealth(REVIEW_SERVICE_URL);
-    }
-
-    private Mono<Health> getHealth(String baseUrl) {
-        String url = baseUrl + "/actuator/health";
-        LOG.debug("Will call the Health API on URL: {}", url);
-
-        return webClient.get().uri(url).retrieve()
-                .bodyToMono(String.class)
-                .map(s -> Health.up().build())
-                .onErrorResume(ex -> Mono.just(Health.down(ex).build()))
-                .log();
-    }
-
     private <K, T> void sendMessage(String bindingName, Event<K, T> event) {
         LOG.debug("Sending a {} message to {}", event.getEventType(), bindingName);
         Message<Event<K, T>> message = MessageBuilder.withPayload(event)

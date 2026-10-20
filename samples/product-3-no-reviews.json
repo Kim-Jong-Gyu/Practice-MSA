@@ -1,0 +1,10 @@
+{
+  "productId": 3,
+  "name": "4K 모니터",
+  "weight": 5200,
+  "recommendations": [
+    { "recommendationId": 1, "author": "오세훈", "rate": 5, "content": "화질이 선명해요." },
+    { "recommendationId": 2, "author": "윤하늘", "rate": 3, "content": "스탠드가 조금 흔들려요." }
+  ],
+  "reviews": []
+}

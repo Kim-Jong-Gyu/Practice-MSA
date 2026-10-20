@@ -1,0 +1,12 @@
+{
+  "productId": 1,
+  "name": "무선 블루투스 이어폰",
+  "weight": 50,
+  "recommendations": [
+    { "recommendationId": 1, "author": "김민수", "rate": 5, "content": "음질이 좋고 배터리가 오래가요." },
+    { "recommendationId": 2, "author": "이지은", "rate": 4, "content": "가격 대비 만족스러워요." }
+  ],
+  "reviews": [
+    { "reviewId": 1, "author": "박서준", "subject": "출퇴근용으로 최고", "content": "노이즈 캔슬링이 좋습니다." }
+  ]
+}

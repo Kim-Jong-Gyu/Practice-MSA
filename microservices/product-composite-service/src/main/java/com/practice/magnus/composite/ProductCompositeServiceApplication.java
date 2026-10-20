@@ -57,17 +57,6 @@ public class ProductCompositeServiceApplication {
 						.url(apiExternalDocUrl));
 	}
 
-	@Bean
-    ReactiveHealthContributor coreServices(ProductCompositeIntegration integration) {
-		Map<String, ReactiveHealthIndicator> registry = new LinkedHashMap<>();
-
-		registry.put("product", integration::getProductHealth);
-		registry.put("recommendation", integration::getRecommendationHealth);
-		registry.put("review", integration::getReviewHealth);
-
-		return CompositeReactiveHealthContributor.fromMap(registry);
-	}
-
 	/**
 	 * 로드밸런서
 	 *
