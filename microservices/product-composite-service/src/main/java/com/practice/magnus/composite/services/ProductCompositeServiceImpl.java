@@ -7,7 +7,11 @@ import com.practice.magnus.api.product.*;
 import com.practice.magnus.util.http.ServiceUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
@@ -19,19 +23,33 @@ public class ProductCompositeServiceImpl implements ProductCompositeService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProductCompositeServiceImpl.class);
 
+    // 인증 정보가 없을 때(테스트 등) Mono.zip이 비지 않도록 대신 넣는 빈 SecurityContext
+    private final SecurityContext nullSC = new SecurityContextImpl();
+
     private final ServiceUtil serviceUtil;
     private final ProductCompositeIntegration integration;
 
-    @Autowired
     public ProductCompositeServiceImpl(ServiceUtil serviceUtil, ProductCompositeIntegration integration) {
         this.serviceUtil = serviceUtil;
         this.integration = integration;
     }
 
+    /**
+     * WebFlux에서는 인증 정보가 ThreadLocal이 아니라 리액티브 컨텍스트에 들어 있으므로
+     * ReactiveSecurityContextHolder.getContext()로 꺼낸 뒤 처리한다.
+     */
     @Override
-    public void createCompositeProduct(ProductAggregate body) {
+    public Mono<Void> createCompositeProduct(ProductAggregate body) {
+        return ReactiveSecurityContextHolder.getContext()
+            .doOnSuccess(sc -> internalCreateCompositeProduct(sc, body))
+            .then();
+    }
+
+    private void internalCreateCompositeProduct(SecurityContext sc, ProductAggregate body) {
 
         try {
+
+            logAuthorizationInfo(sc);
 
             LOG.debug("createCompositeProduct: creates a new composite entity for productId: {}", body.getProductId());
 
@@ -63,7 +81,13 @@ public class ProductCompositeServiceImpl implements ProductCompositeService {
     @Override
     public Mono<ProductAggregate> getCompositeProduct(int productId) {
         return Mono.zip(
-            values -> createProductAggregate((Product) values[0], (List<Recommendation>) values[1], (List<Review>) values[2], serviceUtil.getServiceAddress()),
+            values -> createProductAggregate(
+                (SecurityContext) values[0],
+                (Product) values[1],
+                (List<Recommendation>) values[2],
+                (List<Review>) values[3],
+                serviceUtil.getServiceAddress()),
+            ReactiveSecurityContextHolder.getContext().defaultIfEmpty(nullSC),
             integration.getProduct(productId),
             integration.getRecommendations(productId).collectList(),
             integration.getReviews(productId).collectList())
@@ -72,9 +96,17 @@ public class ProductCompositeServiceImpl implements ProductCompositeService {
     }
 
     @Override
-    public void deleteCompositeProduct(int productId) {
+    public Mono<Void> deleteCompositeProduct(int productId) {
+        return ReactiveSecurityContextHolder.getContext()
+            .doOnSuccess(sc -> internalDeleteCompositeProduct(sc, productId))
+            .then();
+    }
+
+    private void internalDeleteCompositeProduct(SecurityContext sc, int productId) {
 
         try {
+
+            logAuthorizationInfo(sc);
 
             LOG.debug("deleteCompositeProduct: Deletes a product aggregate for productId: {}", productId);
 
@@ -90,7 +122,9 @@ public class ProductCompositeServiceImpl implements ProductCompositeService {
         }
     }
 
-    private ProductAggregate createProductAggregate(Product product, List<Recommendation> recommendations, List<Review> reviews, String serviceAddress) {
+    private ProductAggregate createProductAggregate(SecurityContext sc, Product product, List<Recommendation> recommendations, List<Review> reviews, String serviceAddress) {
+
+        logAuthorizationInfo(sc);
 
         // 1. Setup product info
         int productId = product.getProductId();
@@ -116,5 +150,25 @@ public class ProductCompositeServiceImpl implements ProductCompositeService {
         ServiceAddresses serviceAddresses = new ServiceAddresses(serviceAddress, productAddress, reviewAddress, recommendationAddress);
 
         return new ProductAggregate(productId, name, weight, recommendationSummaries, reviewSummaries, serviceAddresses);
+    }
+
+    /**
+     * 요청에 담긴 JWT의 정보(누가, 어떤 권한으로)를 DEBUG 로그로 남긴다.
+     */
+    private void logAuthorizationInfo(SecurityContext sc) {
+        if (sc != null && sc.getAuthentication() instanceof JwtAuthenticationToken jwtAuthentication) {
+            logAuthorizationInfo(jwtAuthentication.getToken());
+        } else {
+            LOG.warn("No JWT based Authentication supplied, running tests are we?");
+        }
+    }
+
+    private void logAuthorizationInfo(Jwt jwt) {
+        if (jwt == null) {
+            LOG.warn("No JWT supplied, running tests are we?");
+        } else if (LOG.isDebugEnabled()) {
+            LOG.debug("Authorization info: Subject: {}, scopes: {}, expires: {}, issuer: {}, audience: {}",
+                jwt.getSubject(), jwt.getClaim("scope"), jwt.getExpiresAt(), jwt.getIssuer(), jwt.getAudience());
+        }
     }
 }

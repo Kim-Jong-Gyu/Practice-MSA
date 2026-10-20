@@ -1,0 +1,23 @@
+ext {
+    set('springCloudVersion', "2025.1.3")
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-authorization-server'
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-security-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+}
+
+// 실행 jar(bootJar)만 만들고 -plain.jar는 만들지 않음 (Dockerfile의 COPY build/libs/*.jar가 하나만 찾도록)
+jar { enabled = false }
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}

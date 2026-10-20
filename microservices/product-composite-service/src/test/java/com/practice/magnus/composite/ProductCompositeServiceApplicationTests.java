@@ -3,9 +3,10 @@ package com.practice.magnus.composite;
 import static java.util.Collections.singletonList;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
-import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK;
 import static org.springframework.http.HttpStatus.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 
 import com.practice.magnus.api.core.product.Product;
 import com.practice.magnus.api.core.recommendation.Recommendation;
@@ -20,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Flux;
@@ -27,7 +29,7 @@ import reactor.core.publisher.Mono;
 
 @DisplayName("Product Composite API 테스트")
 @SpringBootTest(
-        webEnvironment = RANDOM_PORT,
+        webEnvironment = MOCK,
         properties = "eureka.client.enabled=false")
 @AutoConfigureWebTestClient
 class ProductCompositeServiceApplicationTests {
@@ -41,6 +43,10 @@ class ProductCompositeServiceApplicationTests {
 
     @MockitoBean
     private ProductCompositeIntegration compositeIntegration;
+
+    // 인가 서버 없이 테스트하려고, scope이 담긴 가짜 JWT를 요청에 붙인다 (서명 검증을 건너뜀)
+    private static final SimpleGrantedAuthority READ = new SimpleGrantedAuthority("SCOPE_product:read");
+    private static final SimpleGrantedAuthority WRITE = new SimpleGrantedAuthority("SCOPE_product:write");
 
     @BeforeEach
     void setUp() {
@@ -97,8 +103,48 @@ class ProductCompositeServiceApplicationTests {
                 .jsonPath("$.message").isEqualTo("INVALID: " + PRODUCT_ID_INVALID);
     }
 
+    @Test
+    @DisplayName("토큰 없이 조회하면 401 Unauthorized를 반환한다")
+    void getProductWithoutToken() {
+        client.get()
+                .uri("/product-composite/" + PRODUCT_ID_OK)
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    @DisplayName("product:read 권한이 없는 토큰으로 조회하면 403 Forbidden을 반환한다")
+    void getProductWithoutReadScope() {
+        client.mutateWith(mockJwt())   // scope 없는 토큰
+                .get()
+                .uri("/product-composite/" + PRODUCT_ID_OK)
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    @DisplayName("product:read 권한만 있는 토큰으로 삭제하면 403 Forbidden을 반환한다")
+    void deleteProductWithReadScopeOnly() {
+        client.mutateWith(mockJwt().authorities(READ))
+                .delete()
+                .uri("/product-composite/" + PRODUCT_ID_OK)
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    @DisplayName("product:write 권한이 있는 토큰으로 삭제하면 200 OK를 반환한다")
+    void deleteProductWithWriteScope() {
+        client.mutateWith(mockJwt().authorities(READ, WRITE))
+                .delete()
+                .uri("/product-composite/" + PRODUCT_ID_OK)
+                .exchange()
+                .expectStatus().isOk();
+    }
+
     private WebTestClient.BodyContentSpec getAndVerifyProduct(int productId, HttpStatus expectedStatus) {
-        return client.get()
+        return client.mutateWith(mockJwt().authorities(READ))
+                .get()
                 .uri("/product-composite/" + productId)
                 .accept(APPLICATION_JSON)
                 .exchange()

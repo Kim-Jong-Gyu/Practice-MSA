@@ -1,5 +1,10 @@
 spring.application.name: eureka
 
+# Eureka에 접속할 때 쓰는 HTTP Basic 인증 정보 (클라이언트들의 defaultZone과 같아야 함)
+app:
+  eureka-username: u
+  eureka-password: p
+
 # Eureka 서버의 관례적인 포트. 대시보드: http://localhost:8761
 server:
   port: 8761

@@ -2,9 +2,10 @@ package com.practice.magnus.composite;
 
 import static com.practice.magnus.composite.IsSameEvent.sameEventExceptCreatedAt;
 import static java.util.Collections.singletonList;
-import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK;
 import static org.springframework.http.HttpStatus.OK;
 import static reactor.core.publisher.Mono.just;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 import static com.practice.magnus.api.event.Event.Type.CREATE;
 import static com.practice.magnus.api.event.Event.Type.DELETE;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -28,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.context.annotation.Import;
@@ -37,7 +39,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 @DisplayName("Product Composite 메시지 발행 테스트")
 @SpringBootTest(
-    webEnvironment = RANDOM_PORT,
+    webEnvironment = MOCK,
     properties = {
             "spring.cloud.stream.default-binder=integration",
             "eureka.client.enabled=false"
@@ -171,7 +173,8 @@ class MessagingTests {
     }
 
     private void postAndVerifyProduct(ProductAggregate compositeProduct, HttpStatus expectedStatus) {
-        client.post()
+        client.mutateWith(mockJwt().authorities(new SimpleGrantedAuthority("SCOPE_product:write")))
+            .post()
             .uri("/product-composite")
             .body(just(compositeProduct), ProductAggregate.class)
             .exchange()
@@ -179,7 +182,8 @@ class MessagingTests {
     }
 
     private void deleteAndVerifyProduct(int productId, HttpStatus expectedStatus) {
-        client.delete()
+        client.mutateWith(mockJwt().authorities(new SimpleGrantedAuthority("SCOPE_product:write")))
+            .delete()
             .uri("/product-composite/" + productId)
             .exchange()
             .expectStatus().isEqualTo(expectedStatus);

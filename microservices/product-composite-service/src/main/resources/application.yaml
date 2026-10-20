@@ -1,3 +1,8 @@
+# Eureka 서버의 HTTP Basic 인증 정보 (eureka-server의 app.eureka-username/password와 같아야 함)
+app.eureka-username: u
+app.eureka-password: p
+app.eureka-server: localhost
+
 # Swagger
 api:
   common:
@@ -50,7 +55,6 @@ api:
 
 
 # 서버설정
-
 spring.application.name: product-composite
 
 server:
@@ -69,10 +73,10 @@ springdoc:
   override-with-generic-response: false
 
 # Eureka
-ureka:
+eureka:
   client:
     serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://${app.eureka-username}:${app.eureka-password}@${app.eureka-server}:8761/eureka/
     initialInstanceInfoReplicationIntervalSeconds: 5
     registryFetchIntervalSeconds: 5
   instance:
@@ -80,6 +84,10 @@ ureka:
     leaseExpirationDurationInSeconds: 5
 
 spring.cloud.loadbalancer.cache.ttl: 5s
+
+# OAuth2 리소스 서버: 인가 서버의 공개 키로 JWT 서명을 검증한다
+app.auth-server: localhost
+spring.security.oauth2.resourceserver.jwt.issuer-uri: https://dev-5r5apv33hgiui71h.us.auth0.com/
 
 # Spring Cloud Stream
 spring.cloud.stream:
@@ -126,7 +134,9 @@ management:
 ---
 spring.config.activate.on-profile: docker
 
-eureka.client.serviceUrl.defaultZone: http://eureka:8761/eureka/
+app.eureka-server: eureka
+
+app.auth-server: auth-server
 
 spring.rabbitmq.host: rabbitmq
 spring.cloud.stream.kafka.binder.brokers: kafka

@@ -27,6 +27,10 @@ class EurekaServerApplicationTests {
 
     private static final JsonMapper MAPPER = JsonMapper.builder().build();
 
+    // application.yaml의 app.eureka-username / app.eureka-password
+    private static final String USERNAME = "u";
+    private static final String PASSWORD = "p";
+
     @LocalServerPort
     private int port;
 
@@ -36,6 +40,7 @@ class EurekaServerApplicationTests {
     void setUp() {
         client = RestClient.builder()
             .baseUrl("http://localhost:" + port)
+            .defaultHeaders(headers -> headers.setBasicAuth(USERNAME, PASSWORD))  // Eureka 서버의 HTTP Basic 인증
             .defaultStatusHandler(status -> true, (request, response) -> { })  // 4xx/5xx도 예외 없이 응답으로 받기
             .build();
     }
@@ -43,6 +48,29 @@ class EurekaServerApplicationTests {
     @Test
     @DisplayName("애플리케이션 컨텍스트가 정상적으로 로딩된다")
     void contextLoads() {
+    }
+
+    @Test
+    @DisplayName("인증 정보 없이 접근하면 401을 반환한다")
+    void requestWithoutCredentialsIsRejected() {
+        ResponseEntity<String> response = RestClient.builder()
+            .baseUrl("http://localhost:" + port)
+            .defaultStatusHandler(status -> true, (request, resp) -> { })
+            .build()
+            .get().uri("/eureka/apps")
+            .retrieve().toEntity(String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("비밀번호가 틀리면 401을 반환한다")
+    void requestWithWrongPasswordIsRejected() {
+        ResponseEntity<String> response = client.get().uri("/eureka/apps")
+            .headers(headers -> headers.setBasicAuth(USERNAME, "wrong"))
+            .retrieve().toEntity(String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
