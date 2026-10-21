@@ -30,7 +30,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 		properties = {
 				"logging.level.com.practice.magnus=DEBUG",
 				"spring.jpa.hibernate.ddl-auto=create-drop",
-				"eureka.client.enabled=false"
+				"eureka.client.enabled=false",
+				"spring.cloud.config.enabled=false"
 		})
 @AutoConfigureWebTestClient
 class ReviewServiceApplicationTests extends MySqlTestBase {

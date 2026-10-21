@@ -19,7 +19,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(
     webEnvironment = RANDOM_PORT,
     // 읽기 전용 응답 캐시를 끄면 등록/삭제가 조회 API에 바로 반영된다 (기본은 5초마다 갱신)
-    properties = "eureka.server.use-read-only-response-cache=false")
+    properties = {"eureka.server.use-read-only-response-cache=false", "spring.cloud.config.enabled=false"})
 class EurekaServerApplicationTests {
 
     private static final String TEST_APP = "TEST-SERVICE";

@@ -14,15 +14,16 @@ public class SecurityConfig {
     @Bean
     SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         http
-            .csrf(ServerHttpSecurity.CsrfSpec::disable)
-            .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/headerrouting/**").permitAll()
-                .pathMatchers("/actuator/**").permitAll()
-                .pathMatchers("/eureka/**").permitAll()
-                // 인가 서버로 가는 경로: 토큰을 받으러 가는 길이라 열어 둔다
-                .pathMatchers("/oauth2/**", "/login/**", "/.well-known/**").permitAll()
-                .anyExchange().authenticated())
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .authorizeExchange(exchanges -> exchanges
+                        .pathMatchers("/headerrouting/**").permitAll()
+                        .pathMatchers("/actuator/**").permitAll()
+                        .pathMatchers("/eureka/**").permitAll()
+                        .pathMatchers("/config/**").permitAll()
+                        // 인가 서버로 가는 경로: 토큰을 받으러 가는 길이라 열어 둔다
+                        .pathMatchers("/oauth2/**", "/login/**", "/.well-known/**").permitAll()
+                        .anyExchange().authenticated())
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
         return http.build();
     }

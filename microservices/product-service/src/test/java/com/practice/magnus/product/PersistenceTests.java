@@ -15,7 +15,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import reactor.test.StepVerifier;
 
 @DisplayName("Product 영속성 테스트")
-@DataMongoTest(properties = "spring.data.mongodb.auto-index-creation=true")
+@DataMongoTest(properties = {"spring.data.mongodb.auto-index-creation=true", "spring.cloud.config.enabled=false"})
 class PersistenceTests extends MongoDbTestBase {
 
     @Autowired

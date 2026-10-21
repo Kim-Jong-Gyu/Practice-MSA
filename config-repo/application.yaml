@@ -1,0 +1,45 @@
+# 모든 Config 클라이언트가 공통으로 받는 설정
+# 같은 키가 <서비스 이름>.yaml에도 있으면 서비스 파일의 값이 우선한다
+# (서비스 파일의 기본 섹션도 이 파일의 프로필 섹션보다 우선하므로, 서비스마다 다른 프로필 설정은 서비스 파일에 둔다)
+
+# Eureka 서버의 HTTP Basic 인증 정보 (eureka 서버도 이 값으로 인증을 건다)
+app:
+  eureka-username: u
+  eureka-password: '{cipher}edf0844cb37902085bc005884d1828b54bec33b3a7a2c1f3e02fb3c2f3e03626'
+  eureka-server: localhost
+  auth-server: localhost
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${app.eureka-username}:${app.eureka-password}@${app.eureka-server}:8761/eureka/
+    initialInstanceInfoReplicationIntervalSeconds: 5
+    registryFetchIntervalSeconds: 5
+  instance:
+    leaseRenewalIntervalInSeconds: 5
+    leaseExpirationDurationInSeconds: 5
+
+spring.rabbitmq:
+  host: 127.0.0.1
+  port: 5672
+  username: guest
+  password: '{cipher}2e63a73034869d091d52e5c2abcdb44d8b4c1782226beb2c778b3565ea7578d9'
+
+spring.cloud.stream.kafka.binder:
+  brokers: 127.0.0.1
+  defaultBrokerPort: 9092
+
+# WARNING: Exposing all management endpoints over http should only be used during development, must be locked down in production!
+management.endpoint.health.show-details: "ALWAYS"
+management.endpoints.web.exposure.include: "*"
+
+---
+spring.config.activate.on-profile: docker
+
+app:
+  eureka-server: eureka
+  auth-server: auth-server
+
+spring.rabbitmq.host: rabbitmq
+
+spring.cloud.stream.kafka.binder.brokers: kafka

@@ -1,0 +1,6 @@
+# 테스트 전용 설정: main의 application.yaml 대신 이 파일이 쓰인다 (Config Server에 접속하지 않음)
+# Config Server가 내려주는 것과 같은 파일을 config-repo에서 직접 읽는다 (뒤에 오는 파일이 우선)
+# 상대 경로는 테스트 실행 디렉터리(Gradle에서는 모듈 폴더) 기준이다
+spring.config.import:
+  - file:../../config-repo/application.yaml
+  - file:../../config-repo/recommendation.yaml

@@ -1,101 +1,21 @@
-# Eureka 서버의 HTTP Basic 인증 정보 (eureka-server의 app.eureka-username/password와 같아야 함)
-app.eureka-username: u
-app.eureka-password: p
+app.config-server: localhost
 
-server.port: 9999
-
-# 게이트웨이가 보낸 X-Forwarded-* 헤더로 원래 주소(https://localhost:8443)를 알아낸다
-# 없으면 로그인 리다이렉트가 컨테이너 내부 주소(http://<컨테이너ID>:9999/login)로 가서 브라우저가 접근하지 못한다
-server.forward-headers-strategy: framework
-
-spring.application.name: auth-server
-
-app.eureka-server: localhost
-
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://${app.eureka-username}:${app.eureka-password}@${app.eureka-server}:8761/eureka/
-    initialInstanceInfoReplicationIntervalSeconds: 5
-    registryFetchIntervalSeconds: 5
-  instance:
-    leaseRenewalIntervalInSeconds: 5
-    leaseExpirationDurationInSeconds: 5
+spring.config.import: "configserver:"
 
 spring:
-  security:
-    # 로그인 화면(authorization_code 흐름)에서 쓰는 사용자
-    user:
-      name: magnus
-      password: password
-      roles:
-        - USER
-
-    # 등록된 클라이언트 (책의 reader / writer / noscopes)
-    # 클라이언트끼리 secret이 같으면 기동에 실패하므로(중복 금지) 책 2판처럼 secret-<클라이언트> 형식을 쓴다
-    # 예전의 password, implicit 그랜트는 OAuth 2.1에서 제외되어 Spring Authorization Server가 지원하지 않는다
-    #  - client_credentials: 테스트 스크립트에서 사용자 없이 바로 토큰 발급
-    #  - authorization_code: 브라우저로 로그인한 뒤 토큰 발급 (Swagger UI 등)
-    oauth2:
-      authorizationserver:
-        client:
-          reader:
-            registration:
-              client-id: reader
-              client-secret: "{noop}secret-reader"
-              client-authentication-methods:
-                - client_secret_basic
-              authorization-grant-types:
-                - authorization_code
-                - refresh_token
-                - client_credentials
-              redirect-uris:
-                - https://my.redirect.uri
-              scopes:
-                - openid
-                - product:read
-            require-authorization-consent: true
-            token:
-              access-token-time-to-live: 1h
-
-          writer:
-            registration:
-              client-id: writer
-              client-secret: "{noop}secret-writer"
-              client-authentication-methods:
-                - client_secret_basic
-              authorization-grant-types:
-                - authorization_code
-                - refresh_token
-                - client_credentials
-              redirect-uris:
-                - https://my.redirect.uri
-              scopes:
-                - openid
-                - product:read
-                - product:write
-            require-authorization-consent: true
-            token:
-              access-token-time-to-live: 1h
-
-          # 권한(scope)이 없는 토큰으로 403을 확인할 때 사용
-          noscopes:
-            registration:
-              client-id: noscopes
-              client-secret: "{noop}secret-noscopes"
-              client-authentication-methods:
-                - client_secret_basic
-              authorization-grant-types:
-                - client_credentials
-              scopes:
-                - none
-            token:
-              access-token-time-to-live: 1h
-
-management.endpoint.health.show-details: "ALWAYS"
-management.endpoints.web.exposure.include: "*"
+  application.name: auth-server
+  cloud.config:
+    failFast: true
+    retry:
+      initialInterval: 3000
+      multiplier: 1.3
+      maxInterval: 10000
+      maxAttempts: 20
+    uri: http://${app.config-server}:8888
+    username: ${CONFIG_SERVER_USR}
+    password: ${CONFIG_SERVER_PWD}
 
 ---
 spring.config.activate.on-profile: docker
 
-app.eureka-server: eureka
+app.config-server: config-server

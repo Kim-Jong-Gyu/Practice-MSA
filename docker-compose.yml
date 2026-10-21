@@ -4,6 +4,10 @@ services:
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      # 프로필 적용 전에도 Config Server에 한 번 접속하므로, 주소는 프로필이 아니라 환경변수로 넘긴다
+      - APP_CONFIG_SERVER=config-server
     depends_on:
       mongodb:
         condition: service_healthy
@@ -15,6 +19,10 @@ services:
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      # 프로필 적용 전에도 Config Server에 한 번 접속하므로, 주소는 프로필이 아니라 환경변수로 넘긴다
+      - APP_CONFIG_SERVER=config-server
     depends_on:
       mongodb:
         condition: service_healthy
@@ -26,6 +34,10 @@ services:
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      # 프로필 적용 전에도 Config Server에 한 번 접속하므로, 주소는 프로필이 아니라 환경변수로 넘긴다
+      - APP_CONFIG_SERVER=config-server
     depends_on:
       mysql:
         condition: service_healthy
@@ -37,12 +49,22 @@ services:
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      # 프로필 적용 전에도 Config Server에 한 번 접속하므로, 주소는 프로필이 아니라 환경변수로 넘긴다
+      - APP_CONFIG_SERVER=config-server
     depends_on:
       rabbitmq:
         condition: service_healthy
 
   eureka:
     build: spring-cloud/eureka-server
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      # 프로필 적용 전에도 Config Server에 한 번 접속하므로, 주소는 프로필이 아니라 환경변수로 넘긴다
+      - APP_CONFIG_SERVER=config-server
     mem_limit: 512m
 
   gateway:
@@ -53,13 +75,32 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SERVER_SSL_KEY_STORE=file:/keystore/edge-test.p12
-      - SERVER_SSL_KEY_STORE_PASSWORD=89472643
+      - SERVER_SSL_KEY_STORE_PASSWORD=${SERVER_SSL_KEY_STORE_PASSWORD}
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      # 프로필 적용 전에도 Config Server에 한 번 접속하므로, 주소는 프로필이 아니라 환경변수로 넘긴다
+      - APP_CONFIG_SERVER=config-server
     volumes:
       - ./keystore:/keystore:ro
+
+  config-server:
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker,native
+      - ENCRYPT_KEY=${CONFIG_SERVER_ENCRYPT_KEY}
+      - SPRING_SECURITY_USER_NAME=${CONFIG_SERVER_USR}
+      - SPRING_SECURITY_USER_PASSWORD=${CONFIG_SERVER_PWD}
+    volumes:
+      - ./config-repo:/config-repo:ro
+    build: spring-cloud/config-server
+    mem_limit: 512m
 
   auth-server:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      # 프로필 적용 전에도 Config Server에 한 번 접속하므로, 주소는 프로필이 아니라 환경변수로 넘긴다
+      - APP_CONFIG_SERVER=config-server
     build: spring-cloud/authorization-server
     mem_limit: 512m
 
