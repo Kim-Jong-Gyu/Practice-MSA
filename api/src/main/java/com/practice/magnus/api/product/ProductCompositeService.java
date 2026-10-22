@@ -33,7 +33,7 @@ public interface ProductCompositeService {
     Mono<Void> createCompositeProduct(@RequestBody ProductAggregate body);
 
     /**
-     * Sample usage: curl $HOST:$PORT/product-composite/1
+     * Sample usage: curl $HOST:$PORT/product-composite/1?delay=3&faultPercent=20
      *
      * @param productId
      * @return the composite product info, if found, else null
@@ -51,7 +51,9 @@ public interface ProductCompositeService {
             value    = "/product-composite/{productId}",
             produces = "application/json")
     Mono<ProductAggregate> getCompositeProduct(
-            @Parameter(description = "조회할 상품 ID", example = "1") @PathVariable int productId);
+            @Parameter(description = "조회할 상품 ID", example = "1") @PathVariable int productId,
+            @Parameter(description = "응답 전 인위적으로 지연시킬 시간(초). 타임아웃/서킷 브레이커 테스트용") @RequestParam(value = "delay", required = false, defaultValue = "0") int delay,
+            @Parameter(description = "예외를 던질 확률(%). 재시도/서킷 브레이커 테스트용") @RequestParam(value = "faultPercent", required = false, defaultValue = "0") int faultPercent);
 
     /**
      * Sample usage:

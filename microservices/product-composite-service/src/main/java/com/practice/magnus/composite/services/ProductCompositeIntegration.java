@@ -10,9 +10,11 @@ import com.practice.magnus.api.event.Event;
 import com.practice.magnus.util.exceptions.InvalidInputException;
 import com.practice.magnus.util.exceptions.NotFoundException;
 import com.practice.magnus.util.http.HttpErrorInfo;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.health.contributor.Health;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.http.HttpStatus;
@@ -21,10 +23,13 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.net.URI;
 
 import static com.practice.magnus.api.event.Event.Type.CREATE;
 import static com.practice.magnus.api.event.Event.Type.DELETE;
@@ -67,9 +72,14 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
         return body;
     }
 
+    @Retry(name = "product")
+    @CircuitBreaker(name = "product")
+    @TimeLimiter(name = "product")
     @Override
-    public Mono<Product> getProduct(int productId) {
-        String url = PRODUCT_SERVICE_URL + "/product/" + productId;
+    public Mono<Product> getProduct(int productId, int delay, int faultPercent) {
+        URI url = UriComponentsBuilder.fromUriString(
+                PRODUCT_SERVICE_URL + "/product/{productId}?delay={delay}&faultPercent={faultPercent}")
+            .build(productId, delay, faultPercent);
         LOG.debug("Will call the getProduct API on URL: {}", url);
 
         return webClient.get().uri(url).retrieve()

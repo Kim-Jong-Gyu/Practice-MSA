@@ -54,8 +54,8 @@ spring.application.name: product-composite
 
 server:
   port: 7000
-  error:
-    include-message: always
+
+spring.web.error.include-message: always
 
 # Swagger
 springdoc:
@@ -71,6 +71,41 @@ spring.cloud.loadbalancer.cache.ttl: 5s
 
 # OAuth2 리소스 서버: 인가 서버의 공개 키로 JWT 서명을 검증한다
 spring.security.oauth2.resourceserver.jwt.issuer-uri: https://dev-5r5apv33hgiui71h.us.auth0.com/
+
+# CircuitBreaker
+resilience4j.retry:
+  instances:
+    product:
+      maxAttempts: 3
+      waitDuration: 1000
+      retryExceptions:
+        - org.springframework.web.reactive.function.client.WebClientResponseException$InternalServerError
+
+management.endpoints.web.exposure.include: '*'
+management.endpoint.health.show-details: always
+
+management.health.diskspace.enabled: false
+management.health.circuitbreakers.enabled: true
+
+resilience4j.circuitbreaker:
+  instances:
+    product:
+      registerHealthIndicator: true
+      minimumNumberOfCalls: 5
+      slidingWindowSize: 5
+      failureRateThreshold: 50
+      waitDurationInOpenState: 10000
+      permittedNumberOfCallsInHalfOpenState: 3
+      automaticTransitionFromOpenToHalfOpenEnabled: true
+      ignoreExceptions:
+        - com.practice.magnus.util.exceptions.InvalidInputException
+        - com.practice.magnus.util.exceptions.NotFoundException
+
+resilience4j.timelimiter:
+  instances:
+    product:
+      timeoutDuration: 2s
+      cancelRunningFuture: true
 
 # Spring Cloud Stream
 spring.cloud.stream:
@@ -94,7 +129,6 @@ logging:
   level:
     root: INFO
     com.practice.magnus: DEBUG
-
 ---
 spring.config.activate.on-profile: docker
 

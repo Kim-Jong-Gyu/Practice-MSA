@@ -1,7 +1,7 @@
 spring.application.name: review
 
 server.port: 7003
-server.error.include-message: always
+spring.web.error.include-message: always
 
 # MySQL 연결
 spring.datasource:
@@ -47,7 +47,6 @@ logging:
     com.practice.magnus: DEBUG
     org.hibernate.SQL: DEBUG               # 실행되는 SQL
     org.hibernate.orm.jdbc.bind: TRACE     # SQL에 바인딩되는 파라미터 값
-
 ---
 
 spring.config.activate.on-profile: docker

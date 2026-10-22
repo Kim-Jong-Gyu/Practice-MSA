@@ -2,6 +2,7 @@ package com.practice.magnus.composite;
 
 import static java.util.Collections.singletonList;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK;
 import static org.springframework.http.HttpStatus.*;
@@ -14,6 +15,8 @@ import com.practice.magnus.api.core.review.Review;
 import com.practice.magnus.composite.services.ProductCompositeIntegration;
 import com.practice.magnus.util.exceptions.InvalidInputException;
 import com.practice.magnus.util.exceptions.NotFoundException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +40,8 @@ class ProductCompositeServiceApplicationTests {
     private static final int PRODUCT_ID_OK = 1;
     private static final int PRODUCT_ID_NOT_FOUND = 2;
     private static final int PRODUCT_ID_INVALID = 3;
+    // README/test-em-all.bash가 "fallback 캐시에도 없음"으로 고정해 둔 productId
+    private static final int PRODUCT_ID_NOT_FOUND_IN_FALLBACK_CACHE = 13;
 
     @Autowired
     private WebTestClient client;
@@ -55,7 +60,7 @@ class ProductCompositeServiceApplicationTests {
         when(compositeIntegration.getRecommendations(anyInt())).thenReturn(Flux.empty());
         when(compositeIntegration.getReviews(anyInt())).thenReturn(Flux.empty());
 
-        when(compositeIntegration.getProduct(PRODUCT_ID_OK))
+        when(compositeIntegration.getProduct(eq(PRODUCT_ID_OK), anyInt(), anyInt()))
                 .thenReturn(Mono.just(new Product(PRODUCT_ID_OK, "name", 1, "mock-address")));
 
         when(compositeIntegration.getRecommendations(PRODUCT_ID_OK))
@@ -66,10 +71,10 @@ class ProductCompositeServiceApplicationTests {
                 .thenReturn(Flux.fromIterable(singletonList(
                         new Review(PRODUCT_ID_OK, 1, "author", "subject", "content", "mock address"))));
 
-        when(compositeIntegration.getProduct(PRODUCT_ID_NOT_FOUND))
+        when(compositeIntegration.getProduct(eq(PRODUCT_ID_NOT_FOUND), anyInt(), anyInt()))
                 .thenReturn(Mono.error(new NotFoundException("NOT FOUND: " + PRODUCT_ID_NOT_FOUND)));
 
-        when(compositeIntegration.getProduct(PRODUCT_ID_INVALID))
+        when(compositeIntegration.getProduct(eq(PRODUCT_ID_INVALID), anyInt(), anyInt()))
                 .thenReturn(Mono.error(new InvalidInputException("INVALID: " + PRODUCT_ID_INVALID)));
     }
 
@@ -101,6 +106,30 @@ class ProductCompositeServiceApplicationTests {
         getAndVerifyProduct(PRODUCT_ID_INVALID, UNPROCESSABLE_CONTENT)
                 .jsonPath("$.path").isEqualTo("/product-composite/" + PRODUCT_ID_INVALID)
                 .jsonPath("$.message").isEqualTo("INVALID: " + PRODUCT_ID_INVALID);
+    }
+
+    @Test
+    @DisplayName("서킷 브레이커가 OPEN 상태(CallNotPermittedException)면 fallback 상품을 반환한다")
+    void getProductCircuitBreakerOpenReturnsFallback() {
+        CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("product");
+        when(compositeIntegration.getProduct(eq(PRODUCT_ID_OK), anyInt(), anyInt()))
+                .thenReturn(Mono.error(CallNotPermittedException.createCallNotPermittedException(circuitBreaker)));
+
+        getAndVerifyProduct(PRODUCT_ID_OK, OK)
+                .jsonPath("$.productId").isEqualTo(PRODUCT_ID_OK)
+                .jsonPath("$.name").isEqualTo("Fallback product" + PRODUCT_ID_OK);
+    }
+
+    @Test
+    @DisplayName("서킷 브레이커가 OPEN 상태이고 fallback 캐시에도 없는 상품이면 404 Not Found를 반환한다")
+    void getProductCircuitBreakerOpenAndNotInFallbackCache() {
+        CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("product");
+        when(compositeIntegration.getProduct(eq(PRODUCT_ID_NOT_FOUND_IN_FALLBACK_CACHE), anyInt(), anyInt()))
+                .thenReturn(Mono.error(CallNotPermittedException.createCallNotPermittedException(circuitBreaker)));
+
+        getAndVerifyProduct(PRODUCT_ID_NOT_FOUND_IN_FALLBACK_CACHE, NOT_FOUND)
+                .jsonPath("$.message").isEqualTo(
+                        "Product Id: " + PRODUCT_ID_NOT_FOUND_IN_FALLBACK_CACHE + " not found in fallback cache!");
     }
 
     @Test

@@ -4,7 +4,9 @@ import com.practice.magnus.api.core.product.Product;
 import com.practice.magnus.api.core.recommendation.Recommendation;
 import com.practice.magnus.api.core.review.Review;
 import com.practice.magnus.api.product.*;
+import com.practice.magnus.util.exceptions.NotFoundException;
 import com.practice.magnus.util.http.ServiceUtil;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -79,7 +81,7 @@ public class ProductCompositeServiceImpl implements ProductCompositeService {
     }
 
     @Override
-    public Mono<ProductAggregate> getCompositeProduct(int productId) {
+    public Mono<ProductAggregate> getCompositeProduct(int productId, int delay, int faultPercent) {
         return Mono.zip(
             values -> createProductAggregate(
                 (SecurityContext) values[0],
@@ -88,12 +90,26 @@ public class ProductCompositeServiceImpl implements ProductCompositeService {
                 (List<Review>) values[3],
                 serviceUtil.getServiceAddress()),
             ReactiveSecurityContextHolder.getContext().defaultIfEmpty(nullSC),
-            integration.getProduct(productId),
+            integration.getProduct(productId, delay, faultPercent)
+                .onErrorResume(CallNotPermittedException.class, ex -> getProductFallbackValue(productId)),
             integration.getRecommendations(productId).collectList(),
             integration.getReviews(productId).collectList())
             .doOnError(ex -> LOG.warn("getCompositeProduct failed: {}", ex.toString()))
             .log();
     }
+
+    /**
+     * 서킷 브레이커가 OPEN 상태일 때 호출된다. productId 13은 README/test-em-all.bash가
+     * "항상 404" 시나리오로 고정해 둔 값이라, fallback 캐시에도 없는 것으로 취급한다.
+     */
+    private Mono<Product> getProductFallbackValue(int productId) {
+        LOG.warn("Creating a fallback product for productId = {}", productId);
+        if (productId == 13) {
+            return Mono.error(new NotFoundException("Product Id: " + productId + " not found in fallback cache!"));
+        }
+        return Mono.just(new Product(productId, "Fallback product" + productId, productId, serviceUtil.getServiceAddress()));
+    }
+
 
     @Override
     public Mono<Void> deleteCompositeProduct(int productId) {

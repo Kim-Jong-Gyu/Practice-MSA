@@ -230,6 +230,74 @@ function recreateComposite() {
     assertCurl 200 "curl $AUTH -X POST -k https://$HOST:$PORT/product-composite -H \"Content-Type: application/json\" --data '$composite' -s"
 }
 
+# product-composite의 'product' 서킷 상태 (직접 만든 ProductCircuitBreakerHealthIndicator가 노출)
+function getCircuitBreakerState() {
+    docker run --rm --network=my-network alpine wget product-composite:8080/actuator/health -qO - \
+        | jq -r .components.productCircuitBreaker.details.state
+}
+
+# 서킷 상태 전이 이력 (resilience4j의 circuitbreakerevents 엔드포인트, exposure에 추가해야 열림)
+function getStateTransition() {
+    local index=$1
+    docker run --rm --network=my-network alpine wget product-composite:8080/actuator/circuitbreakerevents/product/STATE_TRANSITION -qO - \
+        | jq -r ".circuitBreakerEvents[$index].stateTransition"
+}
+
+function testCircuitBreaker() {
+
+    echo "Start Circuit Breaker tests!"
+
+    # 처음에는 서킷이 닫혀 있어야 한다
+    assertEqual "CLOSED" "$(getCircuitBreakerState)"
+
+    # minimumNumberOfCalls=5라서 호출이 5개 쌓여야 실패율을 계산한다.
+    # 슬라이딩 윈도(크기 5)를 정상 호출로 가득 채워서, 이전 실행의 기록을 밀어낸다
+    for ((n=0; n<5; n++))
+    do
+        assertCurl 200 "curl -k https://$HOST:$PORT/product-composite/$PROD_ID_REVS_RECS $AUTH -s"
+    done
+
+    # delay=3 > timeoutDuration=2s 라서 타임아웃으로 3번 연속 실패시킨다
+    for ((n=0; n<3; n++))
+    do
+        assertCurl 500 "curl -k https://$HOST:$PORT/product-composite/$PROD_ID_REVS_RECS?delay=3 $AUTH -s"
+        message=$(echo $RESPONSE | jq -r .message)
+        assertEqual "Did not observe any item or terminal signal within 2000ms" "${message:0:57}"
+    done
+    assertEqual "OPEN" "$(getCircuitBreakerState)"
+
+    # 서킷이 열리면 product를 부르지 않고 바로 fallback(200)을 돌려준다 (느린 호출도 기다리지 않음)
+    assertCurl 200 "curl -k https://$HOST:$PORT/product-composite/$PROD_ID_REVS_RECS?delay=3 $AUTH -s"
+    assertEqual "Fallback product$PROD_ID_REVS_RECS" "$(echo "$RESPONSE" | jq -r .name)"
+
+    assertCurl 200 "curl -k https://$HOST:$PORT/product-composite/$PROD_ID_REVS_RECS $AUTH -s"
+    assertEqual "Fallback product$PROD_ID_REVS_RECS" "$(echo "$RESPONSE" | jq -r .name)"
+
+    # fallback에도 없는 상품($PROD_ID_NOT_FOUND)은 404
+    assertCurl 404 "curl -k https://$HOST:$PORT/product-composite/$PROD_ID_NOT_FOUND $AUTH -s"
+    assertEqual "Product Id: $PROD_ID_NOT_FOUND not found in fallback cache!" "$(echo $RESPONSE | jq -r .message)"
+
+    # waitDurationInOpenState=10s 뒤에 자동으로 반열림 (automaticTransitionFromOpenToHalfOpenEnabled=true)
+    echo "Will sleep for 10 sec waiting for the CB to go Half Open..."
+    sleep 10
+    assertEqual "HALF_OPEN" "$(getCircuitBreakerState)"
+
+    # 정상 호출 3번(permittedNumberOfCallsInHalfOpenState)이 성공하면 다시 닫힌다
+    for ((n=0; n<3; n++))
+    do
+        assertCurl 200 "curl -k https://$HOST:$PORT/product-composite/$PROD_ID_REVS_RECS $AUTH -s"
+        assertEqual "product name C" "$(echo "$RESPONSE" | jq -r .name)"
+    done
+    assertEqual "CLOSED" "$(getCircuitBreakerState)"
+
+    # 상태 전이가 순서대로 일어났는지 확인 (값의 형식은 아래 '확인할 것' 참고)
+    assertEqual "State transition from CLOSED to OPEN"      "$(getStateTransition -3)"
+    assertEqual "State transition from OPEN to HALF_OPEN"   "$(getStateTransition -2)"
+    assertEqual "State transition from HALF_OPEN to CLOSED" "$(getStateTransition -1)"
+
+    echo "Circuit Breaker tests OK"
+}
+
 function setupTestdata() {
 
     body="{\"productId\":$PROD_ID_NO_RECS"
@@ -350,6 +418,8 @@ READER_AUTH="-H \"Authorization: Bearer $READER_ACCESS_TOKEN\""
 
 assertCurl 200 "curl -k https://$HOST:$PORT/product-composite/$PROD_ID_REVS_RECS $READER_AUTH -s"
 assertCurl 403 "curl -k https://$HOST:$PORT/product-composite/$PROD_ID_REVS_RECS $READER_AUTH -X DELETE -s"
+
+testCircuitBreaker
 
 echo "End, all tests OK:" `date`
 

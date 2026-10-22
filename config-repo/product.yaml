@@ -1,7 +1,7 @@
 spring.application.name: product
 
 server.port: 7001
-server.error.include-message: always
+spring.web.error.include-message: always
 
 spring.mongodb:
   host: localhost

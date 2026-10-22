@@ -1,7 +1,7 @@
 spring.application.name: recommendation
 
 server.port: 7002
-server.error.include-message: always
+spring.web.error.include-message: always
 
 spring.mongodb:
   host: localhost
