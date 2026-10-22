@@ -17,7 +17,11 @@ dependencies {
 	implementation 'org.springframework.retry:spring-retry'
 	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
 	implementation 'org.springframework.boot:spring-boot-starter-aspectj'
+	implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+	// OpenTelemetry 로그 어펜더 + 자동 연결 (logback-spring.xml에서 사용)
+	implementation project(':observability')
 
+	testImplementation 'org.springframework.boot:spring-boot-starter-opentelemetry-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webflux-test'
 	testImplementation 'org.springframework.cloud:spring-cloud-stream-test-binder'

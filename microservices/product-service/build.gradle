@@ -14,10 +14,13 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.retry:spring-retry'
-
     implementation 'org.mapstruct:mapstruct:1.6.3'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    // OpenTelemetry 로그 어펜더 + 자동 연결 (logback-spring.xml에서 사용)
+    implementation project(':observability')
 
+    testImplementation 'org.springframework.boot:spring-boot-starter-opentelemetry-test'
     testImplementation testFixtures(project(':util'))
     testImplementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webflux-test'

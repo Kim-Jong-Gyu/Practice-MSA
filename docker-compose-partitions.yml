@@ -202,7 +202,16 @@ services:
       start_period: 20s
     networks:
       - my-network
-
+      -
+  grafana-lgtm:
+    image: grafana/otel-lgtm:0.37.0
+    ports:
+      - "3000:3000"   # Grafana 화면
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP (서비스가 보내는 곳)
+    networks:
+      - my-network
+      -
 networks:
   my-network:
     name: my-network

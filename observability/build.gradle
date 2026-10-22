@@ -1,0 +1,18 @@
+// 관측(OpenTelemetry) 공통 설정만 담는 라이브러리 모듈.
+// WebFlux/Servlet 어느 쪽에도 의존하지 않으므로 리액티브 서비스와 Servlet 서비스(eureka, auth-server)가 함께 쓸 수 있다.
+bootJar { enabled = false }
+jar { enabled = true }
+
+apply plugin: 'java-library'
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'io.opentelemetry:opentelemetry-api'
+    // 어펜더가 Logback을 provided로만 선언해서 컴파일할 때만 필요하다 (실행 시에는 각 서비스의 Spring Boot 스타터가 제공)
+    compileOnly 'ch.qos.logback:logback-classic'
+
+    // 각 서비스의 logback-spring.xml이 이 어펜더 클래스를 직접 쓰므로 api로 노출한다.
+    // Boot BOM이 관리하지 않는 alpha 라이브러리라 버전을 직접 지정한다.
+    // Boot 4.1.1이 관리하는 opentelemetry-api(1.62.0)와 맞는 버전을 써야 한다 (2.32.0-alpha는 1.66.0을 요구해 ClassNotFoundException)
+    api 'io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:2.28.1-alpha'
+}

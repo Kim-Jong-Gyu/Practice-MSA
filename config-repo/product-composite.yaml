@@ -81,9 +81,6 @@ resilience4j.retry:
       retryExceptions:
         - org.springframework.web.reactive.function.client.WebClientResponseException$InternalServerError
 
-management.endpoints.web.exposure.include: '*'
-management.endpoint.health.show-details: always
-
 management.health.diskspace.enabled: false
 management.health.circuitbreakers.enabled: true
 

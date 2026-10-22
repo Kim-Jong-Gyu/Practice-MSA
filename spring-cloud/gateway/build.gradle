@@ -9,6 +9,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux'
+    implementation 'org.springframework.cloud:spring-cloud-starter-stream-rabbit'
+    implementation 'org.springframework.cloud:spring-cloud-starter-stream-kafka'
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    // OpenTelemetry 로그 어펜더 + 자동 연결 (logback-spring.xml에서 사용)
+    implementation project(':observability')
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-opentelemetry-test'
     testImplementation 'io.projectreactor:reactor-test'
 }
 

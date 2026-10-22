@@ -3,6 +3,7 @@ rootProject.name = 'msa'
 // settings.gradle — 실제 폴더 경로와 정확히 일치해야 함
 include ':api'
 include ':util'
+include ':observability'
 include ':microservices:product-composite-service'
 include ':microservices:product-service'
 include ':microservices:recommendation-service'

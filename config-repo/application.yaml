@@ -1,6 +1,11 @@
 # 모든 Config 클라이언트가 공통으로 받는 설정
 # 같은 키가 <서비스 이름>.yaml에도 있으면 서비스 파일의 값이 우선한다
 # (서비스 파일의 기본 섹션도 이 파일의 프로필 섹션보다 우선하므로, 서비스마다 다른 프로필 설정은 서비스 파일에 둔다)
+spring.reactor.context-propagation: auto
+management.tracing.sampling.probability: 1.0
+management.opentelemetry.tracing.export.otlp.endpoint: http://localhost:4318/v1/traces
+management.otlp.metrics.export.url: http://localhost:4318/v1/metrics
+management.opentelemetry.logging.export.otlp.endpoint: http://localhost:4318/v1/logs
 
 # Eureka 서버의 HTTP Basic 인증 정보 (eureka 서버도 이 값으로 인증을 건다)
 app:
@@ -39,6 +44,11 @@ spring.config.activate.on-profile: docker
 app:
   eureka-server: eureka
   auth-server: auth-server
+
+# 대신 추가
+management.opentelemetry.tracing.export.otlp.endpoint: http://grafana-lgtm:4318/v1/traces
+management.otlp.metrics.export.url: http://grafana-lgtm:4318/v1/metrics
+management.opentelemetry.logging.export.otlp.endpoint: http://grafana-lgtm:4318/v1/logs
 
 spring.rabbitmq.host: rabbitmq
 
