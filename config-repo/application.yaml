@@ -5,7 +5,7 @@
 # Eureka 서버의 HTTP Basic 인증 정보 (eureka 서버도 이 값으로 인증을 건다)
 app:
   eureka-username: u
-  eureka-password: '{cipher}edf0844cb37902085bc005884d1828b54bec33b3a7a2c1f3e02fb3c2f3e03626'
+  eureka-password: p
   eureka-server: localhost
   auth-server: localhost
 
@@ -23,7 +23,7 @@ spring.rabbitmq:
   host: 127.0.0.1
   port: 5672
   username: guest
-  password: '{cipher}2e63a73034869d091d52e5c2abcdb44d8b4c1782226beb2c778b3565ea7578d9'
+  password: guest
 
 spring.cloud.stream.kafka.binder:
   brokers: 127.0.0.1
