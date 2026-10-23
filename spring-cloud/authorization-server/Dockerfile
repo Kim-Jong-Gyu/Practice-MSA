@@ -1,6 +1,6 @@
 FROM eclipse-temurin:21-jre
 
-EXPOSE 9999
+EXPOSE 80
 
 COPY build/libs/*.jar app.jar
 

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.4
+        # review 서비스의 spring.datasource(config-repo/review.yaml)와 같은 DB/계정
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            value: rootpwd
+          - name: MYSQL_DATABASE
+            value: review-db
+          - name: MYSQL_USER
+            value: user
+          - name: MYSQL_PASSWORD
+            value: pwd
+        ports:
+        - containerPort: 3306
+        # 초기화 중 임시 서버를 띄우며 350Mi를 넘어 OOMKilled되므로 docker-compose.yml의 mem_limit(512m)과 맞춘다
+        resources:
+          limits:
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+    targetPort: 3306

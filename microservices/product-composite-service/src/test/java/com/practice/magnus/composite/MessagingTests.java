@@ -42,7 +42,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
     webEnvironment = MOCK,
     properties = {
             "spring.cloud.stream.default-binder=integration",
-            "eureka.client.enabled=false",
             "spring.cloud.config.enabled=false"
     }
 )

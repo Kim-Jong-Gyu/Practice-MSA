@@ -11,6 +11,10 @@
 #   COMPOSE_FILE=docker-compose-kafka.yml ./test-em-all.bash start stop
 #   USE_AUTH0=false ./test-em-all.bash        # 우리 auth-server로 토큰 발급
 #
+#   쿠버네티스(minikube) 대상: 게이트웨이를 포트 포워딩한 뒤 실행 (start/stop은 docker compose 전용)
+#     kubectl port-forward svc/gateway 8443:443
+#     USE_K8S=true ./test-em-all.bash
+#
 # 모든 요청은 게이트웨이(HTTPS, 자체 서명 인증서라 curl -k)를 거친다.
 #
 # 토큰 발급처
@@ -20,9 +24,6 @@
 #
 : ${HOST=localhost}
 : ${PORT=8443}
-: ${EUREKA_USER=u}
-: ${EUREKA_PASSWORD=p}
-: ${EXPECTED_EUREKA_APPS=6}   # product, recommendation, review, product-composite, gateway, auth-server
 : ${PROD_ID_REVS_RECS=1}
 : ${PROD_ID_NOT_FOUND=13}
 : ${PROD_ID_NO_RECS=113}
@@ -30,6 +31,14 @@
 : ${USE_AUTH0=true}
 : ${AUTH0_DOMAIN=dev-5r5apv33hgiui71h.us.auth0.com}
 : ${AUTH0_AUDIENCE=https://localhost:8443/product-composite}
+: ${NAMESPACE=hands-on}
+
+# 내부 actuator(서킷 브레이커 상태)를 어디서 호출할지: localhost면 docker compose, 아니면 쿠버네티스로 본다
+# port-forward로 쿠버네티스를 localhost에서 테스트할 때는 USE_K8S=true를 직접 지정한다
+if [[ -z "$USE_K8S" ]]
+then
+    [[ "$HOST" == "localhost" ]] && USE_K8S=false || USE_K8S=true
+fi
 
 # Auth0 클라이언트 정보와 사용자 계정 (AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, AUTH0_USER, AUTH0_PASSWORD)
 if [[ -f "$(dirname "$0")/auth0.env" ]]
@@ -80,7 +89,7 @@ function assertEqual() {
 
 function testUrl() {
     url=$@
-    if $url -ks -f -o /dev/null
+    if $url --connect-timeout 2 --max-time 10 -ks -f -o /dev/null
     then
           return 0
     else
@@ -105,31 +114,6 @@ function waitForService() {
         fi
     done
     echo "DONE, continues..."
-}
-
-function waitForEurekaRegistrations() {
-    # Eureka는 외부 포트를 닫았으므로 게이트웨이의 /eureka/api/** 라우트를 통해 조회한다
-    echo -n "Wait for $EXPECTED_EUREKA_APPS services to register in Eureka... "
-
-    n=0
-    until [[ "$(curl -sk -u $EUREKA_USER:$EUREKA_PASSWORD -H "accept:application/json" https://$HOST:$PORT/eureka/api/apps | jq '.applications.application | length' 2>/dev/null)" == "$EXPECTED_EUREKA_APPS" ]]
-    do
-        n=$((n + 1))
-        if [[ $n == 40 ]]
-        then
-            echo " Give up"
-            exit 1
-        else
-            sleep 3
-            echo -n ", retry #$n "
-        fi
-    done
-    echo "DONE"
-
-    # 등록된 서비스 수와 이름 확인
-    assertCurl 200 "curl -k -u $EUREKA_USER:$EUREKA_PASSWORD -H \"accept:application/json\" https://$HOST:$PORT/eureka/api/apps -s"
-    assertEqual $EXPECTED_EUREKA_APPS $(echo $RESPONSE | jq ".applications.application | length")
-    echo "Registered: $(echo $RESPONSE | jq -r '[.applications.application[].name] | sort | join(", ")')"
 }
 
 # 인가 서버에서 client_credentials 방식으로 토큰을 받는다 (사용자 로그인 없음)
@@ -230,22 +214,48 @@ function recreateComposite() {
     assertCurl 200 "curl $AUTH -X POST -k https://$HOST:$PORT/product-composite -H \"Content-Type: application/json\" --data '$composite' -s"
 }
 
+# product-composite의 actuator는 게이트웨이로 노출되지 않으므로 같은 네트워크 안의 alpine에서 wget으로 부른다
+#   docker compose: my-network에 일회용 컨테이너
+#   쿠버네티스:     네임스페이스에 alpine-client Pod를 띄워 kubectl exec
+function startInternalClient() {
+    if [[ "$USE_K8S" == "true" ]]
+    then
+        echo "Restarting alpine-client..."
+        kubectl -n $NAMESPACE delete pod alpine-client --grace-period=1 --ignore-not-found
+        kubectl -n $NAMESPACE run --restart=Never alpine-client --image=alpine --command -- sleep 600
+        echo "Waiting for alpine-client to be ready..."
+        kubectl -n $NAMESPACE wait --for=condition=Ready pod/alpine-client
+        EXEC="kubectl -n $NAMESPACE exec alpine-client --"
+    else
+        EXEC="docker run --rm --network=my-network alpine"
+    fi
+}
+
+function stopInternalClient() {
+    if [[ "$USE_K8S" == "true" ]]
+    then
+        kubectl -n $NAMESPACE delete pod alpine-client --grace-period=1
+    fi
+}
+
 # product-composite의 'product' 서킷 상태 (직접 만든 ProductCircuitBreakerHealthIndicator가 노출)
 function getCircuitBreakerState() {
-    docker run --rm --network=my-network alpine wget product-composite:8080/actuator/health -qO - \
+    $EXEC wget product-composite/actuator/health -qO - \
         | jq -r .components.productCircuitBreaker.details.state
 }
 
 # 서킷 상태 전이 이력 (resilience4j의 circuitbreakerevents 엔드포인트, exposure에 추가해야 열림)
 function getStateTransition() {
     local index=$1
-    docker run --rm --network=my-network alpine wget product-composite:8080/actuator/circuitbreakerevents/product/STATE_TRANSITION -qO - \
+    $EXEC wget product-composite/actuator/circuitbreakerevents/product/STATE_TRANSITION -qO - \
         | jq -r ".circuitBreakerEvents[$index].stateTransition"
 }
 
 function testCircuitBreaker() {
 
     echo "Start Circuit Breaker tests!"
+
+    startInternalClient
 
     # 처음에는 서킷이 닫혀 있어야 한다
     assertEqual "CLOSED" "$(getCircuitBreakerState)"
@@ -294,6 +304,8 @@ function testCircuitBreaker() {
     assertEqual "State transition from CLOSED to OPEN"      "$(getStateTransition -3)"
     assertEqual "State transition from OPEN to HALF_OPEN"   "$(getStateTransition -2)"
     assertEqual "State transition from HALF_OPEN to CLOSED" "$(getStateTransition -1)"
+
+    stopInternalClient
 
     echo "Circuit Breaker tests OK"
 }
@@ -346,6 +358,16 @@ echo "HOST=${HOST}"
 echo "PORT=${PORT}"
 echo "COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml}"
 echo "USE_AUTH0=${USE_AUTH0}"
+echo "USE_K8S=${USE_K8S} (NAMESPACE=${NAMESPACE})"
+
+# start/stop은 docker compose로 스택을 올리고 내린다
+# 쿠버네티스 모드에서 쓰면 minikube 옆에 compose 스택이 하나 더 떠서 메모리와 8443 포트를 두고 다툰다
+if [[ "$USE_K8S" == "true" && ( $@ == *"start"* || $@ == *"stop"* ) ]]
+then
+    echo "start/stop is only supported with docker compose (USE_K8S=false), WILL ABORT!"
+    echo "- Kubernetes: kubectl apply -k kubernetes/services/overlays/dev / kubectl delete -k kubernetes/services/overlays/dev"
+    exit 1
+fi
 
 if [[ $@ == *"start"* ]]
 then
@@ -358,8 +380,11 @@ fi
 
 waitForService curl -k https://$HOST:$PORT/actuator/health
 
-# 6개 서비스가 모두 Eureka에 등록될 때까지 대기 (auth-server가 등록되어야 게이트웨이가 토큰 요청을 전달할 수 있음)
-waitForEurekaRegistrations
+# config-server: 쿠버네티스 probe용 actuator는 인증 없이 열려 있고, 설정 조회는 HTTP Basic이 필요하다
+assertCurl 200 "curl -k https://$HOST:$PORT/config/actuator/health/liveness -s"
+assertCurl 200 "curl -k https://$HOST:$PORT/config/actuator/health/readiness -s"
+assertCurl 401 "curl -k https://$HOST:$PORT/config/product/docker -s"
+
 
 # writer: 조회, 생성, 삭제 모두 가능한 토큰
 if [[ "$USE_AUTH0" == "true" ]]

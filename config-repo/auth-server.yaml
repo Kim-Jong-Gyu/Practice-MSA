@@ -75,3 +75,9 @@ spring:
                 - none
             token:
               access-token-time-to-live: 1h
+
+---
+spring.config.activate.on-profile: docker
+
+# 게이트웨이와 다른 서비스가 http://auth-server (기본 포트 80)로 접근한다
+server.port: 80

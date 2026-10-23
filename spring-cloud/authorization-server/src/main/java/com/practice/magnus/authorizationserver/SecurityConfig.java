@@ -58,7 +58,7 @@ public class SecurityConfig {
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/actuator/**").permitAll()   // health 체크, Eureka 등에서 접근
+                .requestMatchers("/actuator/**").permitAll()   // health 체크 (게이트웨이, 쿠버네티스 probe)
                 .anyRequest().authenticated())
             .formLogin(Customizer.withDefaults());
 

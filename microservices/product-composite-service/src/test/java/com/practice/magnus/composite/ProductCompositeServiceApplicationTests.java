@@ -33,7 +33,7 @@ import reactor.core.publisher.Mono;
 @DisplayName("Product Composite API 테스트")
 @SpringBootTest(
         webEnvironment = MOCK,
-        properties = {"eureka.client.enabled=false", "spring.cloud.config.enabled=false"})
+        properties = {"spring.cloud.config.enabled=false"})
 @AutoConfigureWebTestClient
 class ProductCompositeServiceApplicationTests {
 

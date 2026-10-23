@@ -27,7 +27,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @DisplayName("Product 서비스 통합 테스트")
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
-        properties = {"eureka.client.enabled=false", "spring.cloud.config.enabled=false"})
+        properties = {"spring.cloud.config.enabled=false"})
 @AutoConfigureWebTestClient
 class ProductServiceApplicationTests extends MongoDbTestBase {
 

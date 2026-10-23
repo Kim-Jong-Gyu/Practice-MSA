@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-lgtm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana-lgtm
+  template:
+    metadata:
+      labels:
+        app: grafana-lgtm
+    spec:
+      containers:
+      - name: grafana-lgtm
+        image: grafana/otel-lgtm:0.37.0
+        ports:
+        - name: grafana
+          containerPort: 3000
+        - name: otlp-grpc
+          containerPort: 4317
+        - name: otlp-http
+          containerPort: 4318
+        - name: otelcol-health
+          containerPort: 13133
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            memory: 1Gi
+        # run-all.sh가 모든 구성요소(Grafana/Loki/Tempo/Prometheus/Pyroscope/OTel Collector)가
+        # 준비되면 /tmp/ready 파일을 만든다 — 그 전까지는 liveness/readiness를 보류한다
+        startupProbe:
+          exec:
+            command: ["test", "-f", "/tmp/ready"]
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 36
+        # Grafana 자체 헬스 엔드포인트 (Spring Boot actuator 아님)
+        livenessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /api/health
+            port: 3000
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 6
+          successThreshold: 1
+        # 서비스들이 OTLP를 보내는 OTel Collector의 health_check 확장
+        readinessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /ready
+            port: 13133
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+          successThreshold: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-lgtm
+spec:
+  selector:
+    app: grafana-lgtm
+  ports:
+  - name: grafana
+    port: 3000
+    targetPort: 3000
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+  - name: otlp-http
+    port: 4318
+    targetPort: 4318

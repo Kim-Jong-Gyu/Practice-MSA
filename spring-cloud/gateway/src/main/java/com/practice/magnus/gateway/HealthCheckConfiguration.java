@@ -8,7 +8,6 @@ import org.springframework.boot.health.contributor.CompositeReactiveHealthContri
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.ReactiveHealthContributor;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -16,7 +15,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * 게이트웨이의 /actuator/health에 뒤쪽 마이크로서비스들의 상태를 함께 보여준다.
- * 서비스 주소는 Eureka에 등록된 이름(spring.application.name)으로 찾는다.
+ * 서비스 주소는 서비스 이름을 DNS로 찾는다 (docker compose 서비스 이름 / 쿠버네티스 Service 이름, 포트 생략 = 80).
  */
 @Configuration
 public class HealthCheckConfiguration {
@@ -25,7 +24,7 @@ public class HealthCheckConfiguration {
 
     private final WebClient webClient;
 
-    public HealthCheckConfiguration(@LoadBalanced WebClient.Builder webClientBuilder) {
+    public HealthCheckConfiguration(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.build();
     }
 

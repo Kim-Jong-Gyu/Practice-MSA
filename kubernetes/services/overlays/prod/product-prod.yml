@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product
+spec:
+  template:
+    spec:
+      containers:
+      - name: pro
+        # 운영은 latest가 아니라 고정된 버전 태그를 배포한다
+        image: hands-on/product-service:v1
+        env:
+        # config-repo의 prod 프로필(외부 DB/RabbitMQ 주소, WARN 로깅, 관리 엔드포인트 제한)을 더한다
+        - name: SPRING_PROFILES_ACTIVE
+          value: "docker,prod"
+        resources:
+          requests:
+            memory: 200Mi
+          limits:
+            memory: 512Mi

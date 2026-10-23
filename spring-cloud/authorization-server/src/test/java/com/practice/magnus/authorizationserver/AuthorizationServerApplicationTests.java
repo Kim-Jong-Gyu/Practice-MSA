@@ -18,7 +18,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @DisplayName("Authorization Server 테스트")
-@SpringBootTest(properties = {"eureka.client.enabled=false", "spring.cloud.config.enabled=false"})
+// 테스트에는 RabbitMQ가 없어서 rabbit health가 DOWN(503)이 되므로 끈다 — 이 테스트는 "인증 없이 접근 가능한지"만 본다
+@SpringBootTest(properties = {"spring.cloud.config.enabled=false", "management.health.rabbit.enabled=false"})
 @AutoConfigureMockMvc
 class AuthorizationServerApplicationTests {
 

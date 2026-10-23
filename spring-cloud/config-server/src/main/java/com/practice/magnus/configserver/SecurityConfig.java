@@ -17,6 +17,8 @@ public class SecurityConfig {
             // Disable CSRF to allow POST to /encrypt and /decrypt endpoints
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
+                // 쿠버네티스 probe는 인증 정보 없이 호출하므로 actuator는 열어 둔다
+                .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated())
             .httpBasic(withDefaults());
         return http.build();

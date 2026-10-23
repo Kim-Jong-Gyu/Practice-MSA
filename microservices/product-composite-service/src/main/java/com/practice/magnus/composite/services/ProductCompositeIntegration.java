@@ -15,7 +15,6 @@ import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.Message;
@@ -41,7 +40,7 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 
     private static final Logger LOG = LoggerFactory.getLogger(ProductCompositeIntegration.class);
 
-    // Eureka에 등록된 이름 (각 서비스의 spring.application.name)
+    // 서비스 이름을 DNS로 찾는다 (docker compose 서비스 이름 / 쿠버네티스 Service 이름). 포트 생략 = 80
     private static final String PRODUCT_SERVICE_URL = "http://product";
     private static final String RECOMMENDATION_SERVICE_URL = "http://recommendation";
     private static final String REVIEW_SERVICE_URL = "http://review";
@@ -57,7 +56,7 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 
 
     public ProductCompositeIntegration(
-            @LoadBalanced WebClient.Builder webClientBuilder,
+            WebClient.Builder webClientBuilder,
             JsonMapper mapper,
             StreamBridge streamBridge
     ) {

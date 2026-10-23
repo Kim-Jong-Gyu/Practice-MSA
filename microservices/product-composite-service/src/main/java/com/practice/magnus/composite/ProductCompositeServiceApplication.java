@@ -15,7 +15,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.health.contributor.CompositeReactiveHealthContributor;
 import org.springframework.boot.health.contributor.ReactiveHealthContributor;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -58,12 +57,11 @@ public class ProductCompositeServiceApplication {
 	}
 
 	/**
-	 * 로드밸런서
-	 *
+	 * 코어 서비스 호출용 WebClient.
+	 * 서비스 디스커버리(@LoadBalanced) 없이, http://product 같은 서비스 이름을 DNS(docker compose 네트워크 / 쿠버네티스 Service)로 찾는다.
 	 */
 	@Bean
-	@LoadBalanced
-	public WebClient.Builder loadBalancedWebClientBuilder() {
+	public WebClient.Builder webClientBuilder() {
 		return WebClient.builder();
 	}
 

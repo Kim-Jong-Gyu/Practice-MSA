@@ -1,6 +1,7 @@
 services:
   product:
     build: microservices/product-service
+    image: hands-on/product-service
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_0
@@ -16,6 +17,7 @@ services:
       - my-network
   product-p1:
     build: microservices/product-service
+    image: hands-on/product-service
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1
@@ -31,6 +33,7 @@ services:
       - my-network
   recommendation:
     build: microservices/recommendation-service
+    image: hands-on/recommendation-service
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_0
@@ -46,6 +49,7 @@ services:
       - my-network
   recommendation-p1:
     build: microservices/recommendation-service
+    image: hands-on/recommendation-service
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1
@@ -61,6 +65,7 @@ services:
       - my-network
   review:
     build: microservices/review-service
+    image: hands-on/review-service
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_0
@@ -76,6 +81,7 @@ services:
       - my-network
   review-p1:
     build: microservices/review-service
+    image: hands-on/review-service
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1
@@ -91,6 +97,7 @@ services:
       - my-network
   product-composite:
     build: microservices/product-composite-service
+    image: hands-on/product-composite-service
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned
@@ -100,21 +107,13 @@ services:
       rabbitmq:
         condition: service_healthy
 
-  # eureka
     networks:
       - my-network
-  eureka:
-    build: spring-cloud/eureka-server
-    environment:
-      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
-      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
-    mem_limit: 512m
 
   # Gateway
-    networks:
-      - my-network
   gateway:
     build: spring-cloud/gateway
+    image: hands-on/gateway
     mem_limit: 512m
     ports:
       - "8443:8443"
@@ -138,6 +137,7 @@ services:
     volumes:
       - ./config-repo:/config-repo:ro
     build: spring-cloud/config-server
+    image: hands-on/config-server
     mem_limit: 512m
 
     networks:
@@ -148,6 +148,7 @@ services:
       - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
     build: spring-cloud/authorization-server
+    image: hands-on/auth-server
     mem_limit: 512m
     networks:
       - my-network
@@ -202,7 +203,7 @@ services:
       start_period: 20s
     networks:
       - my-network
-      -
+
   grafana-lgtm:
     image: grafana/otel-lgtm:0.37.0
     ports:
@@ -211,7 +212,7 @@ services:
       - "4318:4318"   # OTLP HTTP (서비스가 보내는 곳)
     networks:
       - my-network
-      -
+
 networks:
   my-network:
     name: my-network

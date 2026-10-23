@@ -67,8 +67,6 @@ springdoc:
   paths-to-match: /**
   override-with-generic-response: false
 
-spring.cloud.loadbalancer.cache.ttl: 5s
-
 # OAuth2 리소스 서버: 인가 서버의 공개 키로 JWT 서명을 검증한다
 spring.security.oauth2.resourceserver.jwt.issuer-uri: https://dev-5r5apv33hgiui71h.us.auth0.com/
 
@@ -130,7 +128,7 @@ logging:
 spring.config.activate.on-profile: docker
 
 server:
-  port: 8080
+  port: 80
 
 ---
 spring.config.activate.on-profile: streaming_partitioned

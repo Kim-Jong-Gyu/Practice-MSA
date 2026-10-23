@@ -1,0 +1,12 @@
+# 운영 환경: base만 배포하고 MongoDB/MySQL/RabbitMQ는 클러스터 밖에서 운영한다고 가정한다 (dev와 달리 포함하지 않음)
+# 각 패치는 base Deployment에 병합된다 — env는 name, containers는 name 기준으로 합쳐지므로 바꿀 항목만 적는다
+resources:
+- ../../base
+patches:
+- path: auth-server-prod.yml
+- path: config-server-prod.yml
+- path: gateway-prod.yml
+- path: product-composite-prod.yml
+- path: product-prod.yml
+- path: recommendation-prod.yml
+- path: review-prod.yml

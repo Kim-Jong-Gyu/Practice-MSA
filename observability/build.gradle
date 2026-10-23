@@ -1,5 +1,5 @@
 // 관측(OpenTelemetry) 공통 설정만 담는 라이브러리 모듈.
-// WebFlux/Servlet 어느 쪽에도 의존하지 않으므로 리액티브 서비스와 Servlet 서비스(eureka, auth-server)가 함께 쓸 수 있다.
+// WebFlux/Servlet 어느 쪽에도 의존하지 않으므로 리액티브 서비스와 Servlet 서비스(auth-server)가 함께 쓸 수 있다.
 bootJar { enabled = false }
 jar { enabled = true }
 

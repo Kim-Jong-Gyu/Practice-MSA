@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "/Users/jonggyu/Desktop/Hands-On-Microservices-with-Spring-Boot-and-Spring-Cloud-master"
+    ],
+    "deny": [
+      "Edit(//Users/jonggyu/Desktop/Hands-On-Microservices-with-Spring-Boot-and-Spring-Cloud-master/**)"
+    ]
+  }
+}

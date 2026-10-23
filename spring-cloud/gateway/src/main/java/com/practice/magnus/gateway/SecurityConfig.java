@@ -18,7 +18,6 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/headerrouting/**").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
-                        .pathMatchers("/eureka/**").permitAll()
                         .pathMatchers("/config/**").permitAll()
                         // 인가 서버로 가는 경로: 토큰을 받으러 가는 길이라 열어 둔다
                         .pathMatchers("/oauth2/**", "/login/**", "/.well-known/**").permitAll()

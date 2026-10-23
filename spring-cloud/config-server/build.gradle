@@ -5,7 +5,10 @@ ext {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.cloud:spring-cloud-config-server'
+    // 쿠버네티스 liveness/readiness probe가 /actuator/health/** 를 호출한다
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
 }
 
 dependencyManagement {
